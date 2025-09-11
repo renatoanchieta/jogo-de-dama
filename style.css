@@ -112,14 +112,15 @@ button:hover {
 
 @media (max-width: 600px) {
   #board {
-    grid-template-columns: repeat(8, min(12vw, 40px));
-    grid-template-rows: repeat(8, min(12vw, 40px));
+    grid-template-columns: repeat(8, min(12vw, 45px));
+    grid-template-rows: repeat(8, min(12vw, 45px));
     border-width: 2px;
+    justify-content: center;
   }
 
   .cell {
-    width: min(12vw, 40px);
-    height: min(12vw, 40px);
+    width: min(12vw, 45px);
+    height: min(12vw, 45px);
   }
 
   .piece {
