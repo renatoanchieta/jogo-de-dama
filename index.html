@@ -7,23 +7,24 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="scoreboard">
-<h1>Regras do Jogo:</h1>
-<p>Cada jogador só poderá fazer um movimento</p>
-<p>Só poderá ser comida uma peça por jogada</p>
-<p>A dama pode percorrer toda a linha em que está</p>
-<div class="placar">
-    Jogador: <span id="playerScore">0</span> | Computador: <span id="computerScore">0</span>
-</div>
+<main>
+    <div id="scoreboard">
+    <h1>Regras do Jogo:</h1>
+    <p>Cada jogador só poderá fazer um movimento</p>
+    <p>Só poderá ser comida uma peça por jogada</p>
+    <p>A dama pode percorrer toda a linha em que está</p>
+    <div class="placar">
+        Jogador: <span id="playerScore">0</span> | Computador: <span id="computerScore">0</span>
+    </div>
 
-<div id="controls">
-    <button onclick="startGame()">Iniciar</button>
-    <button onclick="restartGame()">Restart</button>
-</div>
+    <div id="controls">
+        <button onclick="startGame()">Iniciar</button>
+        <button onclick="restartGame()">Restart</button>
+    </div>
 
-</div>
-<div id="board"></div>
-
+    </div>
+    <div id="board"></div>
+</main>
 <script src="script.js"></script>
 </html>
 </body>
