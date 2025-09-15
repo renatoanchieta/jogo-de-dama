@@ -1,29 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Jogo de Damas</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo de Damas</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
-    <div id="scoreboard">
-    <h1>Regras do Jogo:</h1>    
-    <p>Cada jogador terá um turno para se mover</p>
-    <p>A dama pode percorrer toda a linha em que está</p>
-    <div class="placar">
-        Jogador: <span id="playerScore">0</span> | Computador: <span id="computerScore">0</span>
-    </div>
+  <h1>🎲 Jogo de Damas</h1>
 
-    <div id="controls">
-        <button onclick="startGame()">Iniciar</button>
-        <button onclick="restartGame()">Restart</button>
-    </div>
+  <div id="scoreboard" class="placar">
+    <p>Jogador: <span id="playerScore">0</span></p>
+    <p>Computador: <span id="computerScore">0</span></p>
+  </div>
 
-    </div>
-    <div id="board"></div>
-</main>
-<script src="script.js"></script>
-</html>
+  <div id="board"></div>
+
+  <div id="controls">
+    <select id="difficulty">
+      <option value="easy">Fácil 😄</option>
+      <option value="medium">Médio 🤔</option>
+      <option value="hard">Difícil 😈</option>
+    </select>
+    <button id="restart">🔄 Restart</button>
+  </div>
+
+  <script src="script.js"></script>
 </body>
+</html>
