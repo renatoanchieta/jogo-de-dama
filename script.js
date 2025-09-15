@@ -1,3 +1,4 @@
+// jogo-damas.js
 const board = document.getElementById("board");
 const playerScoreEl = document.getElementById("playerScore");
 const computerScoreEl = document.getElementById("computerScore");
@@ -11,7 +12,7 @@ let computerScore = 0;
 let currentPlayer = "player";
 let selectedPiece = null;
 let capturingPiece = null;
-let difficulty = "easy"; // default
+let difficulty = "easy"; // easy | medium | hard
 
 // === Inicialização do tabuleiro ===
 function createBoard() {
@@ -61,36 +62,20 @@ function addPiece(row, col, owner) {
   }
 }
 
-// === Seleção ===
-function selectPiece(piece) {
-  if (currentPlayer !== "player") return;
-  if (capturingPiece && piece !== capturingPiece) return;
-
-  selectedPiece = piece;
-  clearHighlights();
-
-  const allCaptures = getAllCaptures(currentPlayer);
-
-  let moves = [];
-  if (allCaptures.length > 0) {
-    moves = getAvailableMoves(piece).filter(m => m.captured);
-    if (moves.length === 0) return;
-  } else {
-    moves = getAvailableMoves(piece);
-  }
-
-  moves.forEach(({ row, col, captured }) => {
-    const cell = cells[row][col];
-    cell.classList.add("highlight");
-    cell.onclick = () => movePiece(piece, row, col, captured);
+// === Highlights ===
+function clearHighlights() {
+  // remove classe e handlers onclick (para evitar handlers antigos)
+  cells.flat().forEach(cell => {
+    cell.classList.remove("highlight");
+    cell.onclick = null;
   });
 }
 
 // === Movimentos possíveis ===
 function getAvailableMoves(piece) {
   const moves = [];
-  const row = parseInt(piece.dataset.row);
-  const col = parseInt(piece.dataset.col);
+  const row = parseInt(piece.dataset.row, 10);
+  const col = parseInt(piece.dataset.col, 10);
   const owner = piece.dataset.owner;
   const isKing = piece.dataset.king === "true";
 
@@ -107,8 +92,10 @@ function getAvailableMoves(piece) {
     while (r >= 0 && r < 8 && c >= 0 && c < 8) {
       const cell = cells[r][c];
       if (cell.children.length === 0) {
+        // quadrado vazio
         moves.push({ row: r, col: c, captured: null });
       } else if (cell.children[0].dataset.owner !== owner) {
+        // peça adversária -> ver salto
         const jumpR = r + dr;
         const jumpC = c + dc;
         if (
@@ -120,11 +107,11 @@ function getAvailableMoves(piece) {
         ) {
           moves.push({ row: jumpR, col: jumpC, captured: cell.children[0] });
         }
-        break;
+        break; // não passa por cima de outras peças
       } else {
-        break;
+        break; // peça própria bloqueando
       }
-      if (!isKing) break;
+      if (!isKing) break; // peão não anda em distância
       r += dr;
       c += dc;
     }
@@ -133,76 +120,150 @@ function getAvailableMoves(piece) {
   return moves;
 }
 
-function getAllCaptures(player) {
+function getAllCaptures(owner) {
   const allCaptures = [];
-  const playerPieces = pieces.filter(p => p.dataset.owner === player);
-  playerPieces.forEach(piece => {
+  const ownerPieces = pieces.filter(p => p.dataset.owner === owner);
+  ownerPieces.forEach(piece => {
     const moves = getAvailableMoves(piece).filter(m => m.captured);
     if (moves.length > 0) allCaptures.push({ piece, moves });
   });
   return allCaptures;
 }
 
-function clearHighlights() {
-  cells.flat().forEach(cell => {
-    cell.classList.remove("highlight");
-    cell.onclick = null;
+// === Seleção do jogador ===
+function selectPiece(piece) {
+  if (currentPlayer !== "player") return;
+  if (capturingPiece && piece !== capturingPiece) return;
+
+  selectedPiece = piece;
+  clearHighlights();
+
+  const allCaptures = getAllCaptures("player");
+
+  let moves = [];
+  if (allCaptures.length > 0) {
+    // obrigatoriedade de captura
+    moves = getAvailableMoves(piece).filter(m => m.captured);
+    if (moves.length === 0) return; // peça não pode capturar -> não selecionável
+  } else {
+    moves = getAvailableMoves(piece);
+  }
+
+  moves.forEach(({ row, col, captured }) => {
+    const cell = cells[row][col];
+    cell.classList.add("highlight");
+    cell.onclick = () => handlePlayerMove(piece, row, col, captured);
   });
 }
 
-// === Mover peça ===
+// === Executa a movimentação (sem lógica de turno) ===
 function movePiece(piece, row, col, capturedPiece = null) {
+  // remove highlights antigos
   clearHighlights();
-  const oldRow = parseInt(piece.dataset.row);
-  const oldCol = parseInt(piece.dataset.col);
-  cells[oldRow][oldCol].removeChild(piece);
+
+  const oldRow = parseInt(piece.dataset.row, 10);
+  const oldCol = parseInt(piece.dataset.col, 10);
+
+  // move DOM
+  if (cells[oldRow][oldCol].contains(piece)) {
+    cells[oldRow][oldCol].removeChild(piece);
+  }
   cells[row][col].appendChild(piece);
+
+  // atualiza dataset
   piece.dataset.row = row;
   piece.dataset.col = col;
 
+  // remove peça capturada (se houver)
+  let didCapture = false;
   if (capturedPiece) {
-    const r = parseInt(capturedPiece.dataset.row);
-    const c = parseInt(capturedPiece.dataset.col);
-    if (cells[r][c].contains(capturedPiece)) cells[r][c].removeChild(capturedPiece);
+    const r = parseInt(capturedPiece.dataset.row, 10);
+    const c = parseInt(capturedPiece.dataset.col, 10);
+    if (cells[r][c] && cells[r][c].contains(capturedPiece)) {
+      cells[r][c].removeChild(capturedPiece);
+    }
     pieces = pieces.filter(p => p !== capturedPiece);
+    didCapture = true;
   }
 
+  // promoção a dama
   if ((piece.dataset.owner === "player" && row === 0) || (piece.dataset.owner === "computer" && row === 7)) {
     piece.dataset.king = "true";
     piece.classList.add("king");
   }
 
-  const nextCaptures = getAvailableMoves(piece).filter(m => m.captured);
-  if (capturedPiece && nextCaptures.length > 0) {
-    capturingPiece = piece;
-    selectPiece(piece);
-    return;
-  }
-
-  capturingPiece = null;
-  selectedPiece = null;
-  currentPlayer = currentPlayer === "player" ? "computer" : "player";
-  checkEndGame();
-
-  if (currentPlayer === "computer") setTimeout(computerMove, 500);
+  return didCapture;
 }
 
-// === Movimento do computador ===
-function computerMove() {
+// === Fluxo do jogador (usa movePiece + checa sequência de capturas) ===
+function handlePlayerMove(piece, row, col, capturedPiece) {
+  if (currentPlayer !== "player") return;
+
+  const didCapture = movePiece(piece, row, col, capturedPiece);
+
+  if (didCapture) {
+    const nextCaptures = getAvailableMoves(piece).filter(m => m.captured);
+    if (nextCaptures.length > 0) {
+      // jogador obrigado a continuar com a mesma peça
+      capturingPiece = piece;
+      // mostra novas opções (selectPiece cuidará da restrição)
+      selectPiece(piece);
+      return;
+    }
+  }
+
+  // fim do movimento do jogador -> passa a vez
+  capturingPiece = null;
+  selectedPiece = null;
+  currentPlayer = "computer";
+  checkEndGame();
+  if (currentPlayer === "computer") {
+    setTimeout(() => computerMove(), 400);
+  }
+}
+
+// === Movimento do computador (suporta múltiplas capturas recursivas) ===
+function computerMove(pieceInSequence = null) {
+  // Se estamos no meio de uma sequência (após uma captura anterior) -> continuar
+  if (pieceInSequence) {
+    const nextCaptures = getAvailableMoves(pieceInSequence).filter(m => m.captured);
+    if (nextCaptures.length > 0) {
+      // escolhe uma das capturas (aleatória; estratégia pode ser melhorada)
+      const move = nextCaptures[Math.floor(Math.random() * nextCaptures.length)];
+      movePiece(pieceInSequence, move.row, move.col, move.captured);
+      // aguarda animação pequena antes de continuar
+      setTimeout(() => computerMove(pieceInSequence), 350);
+      return;
+    } else {
+      // acabou a sequência de capturas -> volta pro jogador
+      currentPlayer = "player";
+      checkEndGame();
+      return;
+    }
+  }
+
+  // 1) verifica se existe alguma captura obrigatória
   const allCaptures = getAllCaptures("computer");
   if (allCaptures.length > 0) {
     let moveData;
     if (difficulty === "hard") {
+      // heurística simples: escolhe o conjunto com mais opções imediatas
       moveData = allCaptures.reduce((best, option) =>
         option.moves.length > best.moves.length ? option : best, allCaptures[0]);
     } else {
       moveData = allCaptures[Math.floor(Math.random() * allCaptures.length)];
     }
+
     const move = moveData.moves[Math.floor(Math.random() * moveData.moves.length)];
+    // executa a primeira captura
     movePiece(moveData.piece, move.row, move.col, move.captured);
+
+    // continua a sequência com a mesma peça
+    setTimeout(() => computerMove(moveData.piece), 350);
     return;
   }
 
+  // 2) sem capturas: movimenta normalmente
   const computerPieces = pieces.filter(p => p.dataset.owner === "computer");
   let possibleMoves = [];
   computerPieces.forEach(piece => {
@@ -213,14 +274,17 @@ function computerMove() {
   if (possibleMoves.length > 0) {
     let move;
     if (difficulty === "medium" || difficulty === "hard") {
+      // tenta promover se possível (ex.: chegar à última linha)
       move = possibleMoves.find(m => m.row === 7) || possibleMoves[0];
     } else {
       move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
     }
     movePiece(move.piece, move.row, move.col);
-  } else {
-    currentPlayer = "player";
   }
+
+  // fim do turno do computador
+  currentPlayer = "player";
+  checkEndGame();
 }
 
 // === Fim de jogo ===
@@ -233,15 +297,18 @@ function checkEndGame() {
     updateScores();
     alert("Você perdeu!");
     startGame();
+    return true;
   } else if (computerPieces.length === 0) {
     playerScore++;
     updateScores();
     alert("Você venceu!");
     startGame();
+    return true;
   }
+  return false;
 }
 
-// === Início ===
+// === Início / reinício ===
 function startGame() {
   createBoard();
   placePieces();
@@ -256,7 +323,7 @@ function updateScores() {
   computerScoreEl.textContent = computerScore;
 }
 
-// === Eventos ===
+// === Eventos UI ===
 restartBtn.addEventListener("click", () => {
   playerScore = 0;
   computerScore = 0;
@@ -267,5 +334,5 @@ difficultySelect.addEventListener("change", (e) => {
   difficulty = e.target.value;
 });
 
-// Inicialização
+// inicializa
 startGame();
