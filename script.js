@@ -8,7 +8,7 @@ let playerScore = 0;
 let computerScore = 0;
 let currentPlayer = "player";
 let selectedPiece = null;
-let capturingPiece = null; // peça que está em sequência de captura obrigatória
+let capturingPiece = null; // peça em sequência obrigatória de captura
 
 // Inicialização do tabuleiro
 function createBoard() {
@@ -80,7 +80,7 @@ function selectPiece(piece) {
   });
 }
 
-// Obtém movimentos possíveis (normais e capturas)
+// Obtém movimentos possíveis
 function getAvailableMoves(piece) {
   const moves = [];
   const row = parseInt(piece.dataset.row);
@@ -89,32 +89,70 @@ function getAvailableMoves(piece) {
   const isKing = piece.dataset.king === "true";
 
   const directions = isKing
-    ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+    ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] // dama: todas as diagonais
     : owner === "player"
-    ? [[-1, -1], [-1, 1]]
-    : [[1, -1], [1, 1]];
+    ? [[-1, -1], [-1, 1]] // jogador normal: sobe
+    : [[1, -1], [1, 1]];  // computador normal: desce
 
   directions.forEach(([dr, dc]) => {
     let r = row + dr;
     let c = col + dc;
+    let captured = null;
 
-    while (r >= 0 && r < 8 && c >= 0 && c < 8) {
-      const cell = cells[r][c];
-      if (cell.children.length === 0) {
-        moves.push({ row: r, col: c, captured: null });
-      } else if (cell.children[0].dataset.owner !== owner) {
-        const jumpR = r + dr;
-        const jumpC = c + dc;
-        if (jumpR >= 0 && jumpR < 8 && jumpC >= 0 && jumpC < 8 && cells[jumpR][jumpC].children.length === 0) {
-          moves.push({ row: jumpR, col: jumpC, captured: cell.children[0] });
+    if (isKing) {
+      // ✅ lógica da dama: pode andar várias casas
+      while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        const cell = cells[r][c];
+
+        if (cell.children.length === 0) {
+          if (!captured) {
+            moves.push({ row: r, col: c, captured: null }); // movimento livre
+          } else {
+            moves.push({ row: r, col: c, captured }); // movimento após captura
+          }
+        } else {
+          const occupant = cell.children[0];
+          if (occupant.dataset.owner !== owner && !captured) {
+            // achou inimigo → verificar casas seguintes para pulo
+            let jumpR = r + dr;
+            let jumpC = c + dc;
+            while (
+              jumpR >= 0 && jumpR < 8 &&
+              jumpC >= 0 && jumpC < 8 &&
+              cells[jumpR][jumpC].children.length === 0
+            ) {
+              moves.push({ row: jumpR, col: jumpC, captured: occupant });
+              jumpR += dr;
+              jumpC += dc;
+            }
+          }
+          break; // para dama, só pode pular 1 inimigo por direção
         }
-        break;
-      } else {
-        break;
+
+        r += dr;
+        c += dc;
       }
-      if (!isKing) break;
-      r += dr;
-      c += dc;
+    } else {
+      // ✅ lógica de peça normal: só 1 casa ou captura imediata
+      if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        const cell = cells[r][c];
+        if (cell.children.length === 0) {
+          moves.push({ row: r, col: c, captured: null });
+        } else {
+          const occupant = cell.children[0];
+          if (occupant.dataset.owner !== owner) {
+            const jumpR = r + dr;
+            const jumpC = c + dc;
+            if (
+              jumpR >= 0 && jumpR < 8 &&
+              jumpC >= 0 && jumpC < 8 &&
+              cells[jumpR][jumpC].children.length === 0
+            ) {
+              moves.push({ row: jumpR, col: jumpC, captured: occupant });
+            }
+          }
+        }
+      }
     }
   });
 
@@ -164,12 +202,16 @@ function movePiece(piece, row, col, capturedPiece = null) {
     piece.classList.add("king");
   }
 
-  // Captura múltipla: só continua se houver outra captura da mesma peça
+  // Captura múltipla
   const nextCaptures = getAvailableMoves(piece).filter(m => m.captured);
   if (capturedPiece && nextCaptures.length > 0) {
     capturingPiece = piece;
-    selectPiece(piece);
-    return; // mantém turno do mesmo jogador
+    if (currentPlayer === "player") {
+      selectPiece(piece);
+    } else {
+      setTimeout(() => continueComputerCaptures(piece), 400);
+    }
+    return;
   }
 
   // encerra turno
@@ -204,7 +246,18 @@ function computerMove() {
     const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
     movePiece(move.piece, move.row, move.col);
   } else {
-    currentPlayer = "player"; // bloqueio, volta para jogador
+    currentPlayer = "player"; // sem jogadas → passa turno
+  }
+}
+
+// Função auxiliar para capturas múltiplas da IA
+function continueComputerCaptures(piece) {
+  const nextCaptures = getAvailableMoves(piece).filter(m => m.captured);
+  if (nextCaptures.length > 0 && piece.dataset.owner === "computer") {
+    const move = nextCaptures[Math.floor(Math.random() * nextCaptures.length)];
+    movePiece(piece, move.row, move.col, move.captured);
+  } else {
+    currentPlayer = "player";
   }
 }
 
@@ -243,4 +296,3 @@ function updateScores() {
 
 // ✅ inicialização
 startGame();
-
